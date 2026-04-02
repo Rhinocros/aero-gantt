@@ -20,6 +20,18 @@
 
 ---
 
+## 📊 预览
+
+### 基础视图 (Normal View)
+展示了任务自然分布、色彩自动分配和时间轴对齐的基础布局。
+![普通版预览](assets/images/screenshots/screenshot_cn_1.png)
+
+### 多级工程 (Hierarchy View)
+展示了文件夹缩进、父级任务条 (Parent Bar) 以及多级工程嵌套的管理逻辑。
+![包含父级版预览](assets/images/screenshots/screenshot_cn_2.png)
+
+---
+
 ## ✨ 功能特性
 
 ### 📥 数据导入

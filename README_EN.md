@@ -18,6 +18,18 @@ A lightweight, zero-dependency Gantt chart generator — built with native HTML5
 
 ---
 
+## 📊 Preview
+
+### Normal View
+Basic layout showing natural task distribution, automatic color assignment, and timeline alignment.
+![Normal View](assets/images/screenshots/screenshot_en_1.png)
+
+### Hierarchical View
+Management logic for folder indentation, Parent Bars, and multi-level project nesting.
+![Hierarchy View](assets/images/screenshots/screenshot_en_2.png)
+
+---
+
 ## ✨ Features
 
 ### 📥 Data Import
