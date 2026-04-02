@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# <img src="logo.svg" width="32" align="absmiddle"> 灵越甘特图生成系统
+# <img src="assets/images/logo.png" width="32" align="absmiddle"> 灵越甘特图生成系统
 
 **Aero Gantt Chart Generator**
 

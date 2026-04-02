@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# <img src="logo.svg" width="32" align="absmiddle"> Aero Gantt Chart Generator
+# <img src="assets/images/logo.png" width="32" align="absmiddle"> Aero Gantt Chart Generator
 
 A lightweight, zero-dependency Gantt chart generator — built with native HTML5, JavaScript, and CSS3. No installation, no frameworks, no build tools. Open in any browser and start working.
 
