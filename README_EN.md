@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# 📊 Gantt Chart Generator
+# <img src="assets/images/logo.svg" width="32" height="32" style="vertical-align: middle;"> Gantt Chart Generator
 
 A lightweight, zero-dependency Gantt chart generator — built with native HTML5, JavaScript, and CSS3. No installation, no frameworks, no build tools. Open in any browser and start working.
 

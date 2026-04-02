@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# 📊 灵越甘特图生成系统
+# <img src="assets/images/logo.svg" width="32" height="32" style="vertical-align: middle;"> 灵越甘特图生成系统
 
 **Gantt Chart Generator**
 
