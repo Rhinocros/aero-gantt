@@ -5,9 +5,9 @@
 
 <div align="center">
 
-# <img src="assets/images/logo.svg" width="32" height="32" style="vertical-align: middle;"> 灵越甘特图生成系统
+# <img src="logo.svg" width="32" align="absmiddle"> 灵越甘特图生成系统
 
-**Gantt Chart Generator**
+**Aero Gantt Chart Generator**
 
 一款轻量、开箱即用的甘特图生成工具，无需安装任何依赖，没有复杂框架和环境配置，原生HTML5，JavaScript，CSS3，浏览器打开即用。
 
