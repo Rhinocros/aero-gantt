@@ -1478,16 +1478,21 @@ function exportCsv() {
   const lines = [header];
   tasksState.forEach(t => {
     let seriesName = "";
-    let taskName = t.name;
+    let taskName = t.name || "";
     if (t.type === "series") {
-      seriesName = t.name;
+      seriesName = t.name || "";
       taskName = "";
     } else if (t.parentId) {
       const p = tasksById.get(t.parentId);
-      seriesName = p ? p.name : "";
+      seriesName = p ? (p.name || "") : "";
     }
-    const timeStr = fmtTaskTime(t);
-    lines.push(`"${seriesName.replaceAll('"', '""')}","${taskName.replaceAll('"', '""')}","${timeStr}"`);
+    
+    const sName = String(seriesName).replaceAll('"', '""');
+    const tName = String(taskName).replaceAll('"', '""');
+    const startStr = fmtDate(t.start);
+    const endStr = fmtDate(t.end);
+    
+    lines.push(`"${sName}","${tName}","${startStr}","${endStr}"`);
   });
   // Prepend BOM for Excel UTF-8 support
   downloadText(getFileName("csv"), "\ufeff" + lines.join("\n"), "text/csv;charset=utf-8");
@@ -1495,7 +1500,7 @@ function exportCsv() {
 
 function exportXlsx() {
   // Create Header Row (Matching Import Format)
-  const data = [[t("xlsxSeries"), t("xlsxTaskName"), t("xlsxTimeRange"), t("xlsxColor")]];
+  const data = [[t("xlsxSeries"), t("xlsxTaskName"), t("xlsxStartDate"), t("xlsxEndDate"), t("xlsxColor")]];
 
   tasksState.forEach(t => {
     let seriesName = "";
@@ -1511,12 +1516,12 @@ function exportXlsx() {
       taskName = t.name;
     }
 
-    const timeStr = fmtTaskTime(t);
     data.push([
-      seriesName,
-      taskName,
-      timeStr,
-      t.color
+      seriesName || "",
+      taskName || "",
+      fmtDate(t.start),
+      fmtDate(t.end),
+      t.color || ""
     ]);
   });
 
@@ -1621,16 +1626,19 @@ function handleProjectFile(file) {
   reader.readAsText(file);
 }
 
-async function downloadText(filename, text, mimeType = "text/plain;charset=utf-8") {
-  const blob = new Blob([text], { type: mimeType });
+async function downloadText(filename, text, mimeType = "text/plain") {
+  // Ensure mimeType for the Blob is correct, but use a clean version for the picker
+  const blob = new Blob([text], { type: mimeType.includes("charset") ? mimeType : mimeType + ";charset=utf-8" });
+  
   if (window.showSaveFilePicker) {
     try {
       const ext = filename.split('.').pop();
+      const acceptMime = mimeType.split(';')[0];
       const opts = {
         suggestedName: filename,
         types: [{
           description: ext.toUpperCase() + ' ' + t("fileDesc"),
-          accept: { [mimeType]: ['.' + ext] },
+          accept: { [acceptMime]: ['.' + ext] },
         }],
       };
       const handle = await window.showSaveFilePicker(opts);
@@ -1639,19 +1647,25 @@ async function downloadText(filename, text, mimeType = "text/plain;charset=utf-8
       await writable.close();
       return;
     } catch (err) {
-      if (err.name !== 'AbortError') console.error(err);
-      return;
+      // AbortError is just the user canceling, ignore it.
+      if (err.name === 'AbortError') return;
+      
+      // For any other error (like security restrictions or invalid types), fallback to traditional download
+      console.warn("File System Access API failed, falling back to traditional download:", err);
     }
   }
 
+  // Fallback: Traditional <a> tag download
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 function applyAllPositions() {
@@ -1727,6 +1741,7 @@ function computePrintDayWidth() {
 }
 
 function exportPdf() {
+  const cs = getComputedStyle(document.documentElement);
   const originalTitle = document.title;
   const titleVal = (document.getElementById("doc-title").value || t("defaultTitleShort")).trim();
   document.title = titleVal;

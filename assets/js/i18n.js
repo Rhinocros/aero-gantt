@@ -85,6 +85,8 @@ const LANG = {
     csvHeader: "项目系列,工程项目,开始日期,结束日期",
     xlsxSeries: "项目系列",
     xlsxTaskName: "工程项目名称",
+    xlsxStartDate: "开始日期",
+    xlsxEndDate: "结束日期",
     xlsxTimeRange: "时间范围",
     xlsxColor: "颜色",
     sheetName: "甘特图数据",
@@ -177,6 +179,8 @@ const LANG = {
     csvHeader: "Series,Task,Start Date,End Date",
     xlsxSeries: "Series",
     xlsxTaskName: "Task Name",
+    xlsxStartDate: "Start Date",
+    xlsxEndDate: "End Date",
     xlsxTimeRange: "Time Range",
     xlsxColor: "Color",
     sheetName: "Gantt Data",
@@ -227,7 +231,7 @@ function applyI18n() {
     const key = el.getAttribute("data-i18n");
     if (key) {
       // For elements with .btn-text-content children, update the text span
-      const textSpan = el.querySelector(".btn-text-content");
+      const textSpan = el.classList.contains("btn-text-content") ? el : el.querySelector(".btn-text-content");
       if (textSpan) {
         // Preserve inner icons (SVGs) — only update text nodes
         const svgs = textSpan.querySelectorAll("svg, img");
@@ -259,11 +263,22 @@ function applyI18n() {
 
   document.querySelectorAll("[data-i18n-value]").forEach(el => {
     const key = el.getAttribute("data-i18n-value");
-    if (key) el.value = t(key);
+    if (key) {
+      // Check if current value matches any of the default translations
+      const isDefault = Object.values(LANG).some(dict => dict[key] === el.value);
+      if (isDefault) {
+        el.value = t(key);
+      }
+    }
   });
 
-  // Update page title
-  document.title = t("appTitle");
+  // Update page title (browser tab) to match the main title input
+  const docTitleInput = document.getElementById("doc-title");
+  if (docTitleInput) {
+    document.title = docTitleInput.value;
+  } else {
+    document.title = t("appTitle");
+  }
 }
 
 /**
