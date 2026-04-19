@@ -1,199 +1,142 @@
-/* ===== Premium Corner-Cut & Slide Animation ===== */
+/* ===== Refined Uiverse Button Theme ===== */
+
 .btn {
-    position: relative;
+    /* Font size reduced as requested */
+    font-size: 14px !important; 
+    font-weight: 600;
+    padding: 0.6em 1.4em !important;
+    border: none !important;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    color: white !important;
+    border-radius: 4px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     overflow: hidden;
-    font-weight: 500;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    padding: 10px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    text-decoration: none;
     z-index: 1;
-    color: white !important;
 }
 
-/* Corner Decors */
-.corner-top,
-.corner-bottom {
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    transition: all 0.5s ease-in-out;
-    z-index: 2;
-}
-
-.corner-top {
-    top: 0;
-    right: 0;
-}
-
-.corner-bottom {
-    bottom: 0;
-    left: 0;
-    transform: rotate(180deg);
-}
-
-/* The "Cut" effect inside the corner decor */
-.corner-cut {
+/* Use pseudo-element for gradient to prevent white flash during transition */
+.btn::before {
+    content: "";
     position: absolute;
     top: 0;
-    right: 0;
-    width: 18px;
-    height: 18px;
-    transform: translate(50%, -50%) rotate(45deg);
-    background: var(--panel);
-    /* Match the container background */
-}
-
-/* Background Slide Layer */
-.btn-slide {
-    position: absolute;
-    bottom: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    transition: all 0.5s ease-in-out;
-    transition-delay: 0.1s;
-    transform: translateX(-100%);
-    z-index: 0;
-    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    z-index: -1; /* Behind the text content */
 }
 
-/* Text Content */
+.btn:hover,
+.group:hover .btn {
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.4);
+    /* Prevent style.css from turning the button white or jumping */
+    background-color: transparent; 
+    transform: none !important; 
+}
+
+.btn:hover::before,
+.group:hover .btn::before {
+    opacity: 1;
+}
+
+.btn:active,
+.group:active .btn {
+    transform: translate(0, 0.15em) !important;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Text must stay on top of the gradient */
 .btn-text-content {
     position: relative;
-    z-index: 3;
-    width: 100%;
-    text-align: center;
-    transition: color 0.2s ease-in-out;
-}
-
-/* Hover States */
-.group:hover .corner-top {
-    margin-right: -20px;
-    margin-top: -20px;
-}
-
-.group:hover .corner-bottom {
-    margin-left: -20px;
-    margin-bottom: -20px;
-}
-
-.group:hover .btn-slide {
-    transform: translateX(0);
+    z-index: 2;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 /* Row-based Color Assignments */
-.btn-row-1 {
-    background-color: var(--btn-row-1) !important;
+
+/* Row 1: Green */
+.btn-row-1 { background-color: var(--btn-row-1) !important; }
+.btn-row-1::before {
+    background: linear-gradient(90deg, var(--btn-row-1) 0%, var(--btn-row-1-slide) 100%);
 }
 
-.btn-row-1 .corner-top,
-.btn-row-1 .corner-bottom {
-    background-color: var(--btn-row-1-dark) !important;
+/* Row 2: Blue */
+.btn-row-2 { background-color: var(--btn-row-2) !important; }
+.btn-row-2::before {
+    background: linear-gradient(90deg, var(--btn-row-2) 0%, var(--btn-row-2-slide) 100%);
 }
 
-.btn-row-1 .btn-slide {
-    background-color: var(--btn-row-1-slide) !important;
+/* Share: Orange/Amber */
+.btn-share { background-color: var(--btn-share) !important; }
+.btn-share::before {
+    background: linear-gradient(90deg, var(--btn-share) 0%, var(--btn-share-slide) 100%);
 }
 
-.btn-row-2 {
-    background-color: var(--btn-row-2) !important;
+/* Row 3: Purple/Indigo (Undo/Redo) */
+.btn-row-3 { background-color: var(--btn-row-3) !important; }
+.btn-row-3::before {
+    background: linear-gradient(90deg, var(--btn-row-3) 0%, var(--btn-row-3-slide) 100%);
 }
 
-.btn-row-2 .corner-top,
-.btn-row-2 .corner-bottom {
-    background-color: var(--btn-row-2-dark) !important;
+/* Row 4: Violet/Purple */
+.btn-row-4 { background-color: var(--btn-row-4) !important; }
+.btn-row-4::before {
+    background: linear-gradient(90deg, var(--btn-row-4) 0%, var(--btn-row-4-slide) 100%);
 }
 
-.btn-row-2 .btn-slide {
-    background-color: var(--btn-row-2-slide) !important;
+/* Collapse: Red */
+.btn-collapse { background-color: var(--btn-collapse) !important; }
+.btn-collapse::before {
+    background: linear-gradient(90deg, var(--btn-collapse) 0%, var(--btn-collapse-slide) 100%);
 }
 
-.btn-row-3 {
-    background-color: var(--btn-row-3) !important;
-}
-
-.btn-row-3 .corner-top,
-.btn-row-3 .corner-bottom {
-    background-color: var(--btn-row-3-dark) !important;
-}
-
-.btn-row-3 .btn-slide {
-    background-color: var(--btn-row-3-slide) !important;
-}
-
-.btn-row-4 {
-    background-color: var(--btn-row-4) !important;
-}
-
-.btn-row-4 .corner-top,
-.btn-row-4 .corner-bottom {
-    background-color: var(--btn-row-4-dark) !important;
-}
-
-.btn-row-4 .btn-slide {
-    background-color: var(--btn-row-4-slide) !important;
-}
-
-.btn-share {
-    background-color: var(--btn-share) !important;
-}
-
-.btn-share .corner-top,
-.btn-share .corner-bottom {
-    background-color: var(--btn-share-dark) !important;
-}
-
-.btn-share .btn-slide {
-    background-color: var(--btn-share-slide) !important;
-}
-
-.btn-collapse {
-    background-color: var(--btn-collapse) !important;
-}
-
-.btn-collapse .corner-top,
-.btn-collapse .corner-bottom {
-    background-color: var(--btn-collapse-dark) !important;
-}
-
-.btn-collapse .btn-slide {
-    background-color: var(--btn-collapse-slide) !important;
-}
-
-/* Disabled Logic */
-.btn:disabled {
-    filter: grayscale(0.8) opacity(0.5);
-    cursor: not-allowed;
-}
-
+/* Disabled Logic - Fixed to prevent visibility issues in light themes */
+.btn:disabled,
 .btn:disabled:hover {
+    filter: grayscale(0.7);
+    opacity: 0.5;
+    cursor: not-allowed !important;
     transform: none !important;
     box-shadow: none !important;
+    background-color: var(--btn-row-3) !important; /* Keep base color or a neutral one */
 }
 
-.btn:disabled:hover .corner-top {
-    margin: 0 !important;
-    transform: none !important;
+.btn:disabled::before {
+    display: none !important;
 }
 
-.btn:disabled:hover .corner-bottom {
-    margin: 0 !important;
-    transform: rotate(180deg) !important;
+/* Tweak for specific buttons to prevent overflow and wrapping */
+.actions-row .btn {
+    padding: 0.5em 0.5em !important;
 }
 
-.btn:disabled:hover .btn-slide {
-    transform: translateX(-100%) !important;
+/* Ensure the bottom row of utility buttons stays on one line */
+.btn-row-4,
+.btn-collapse {
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    padding: 0.5em 4px !important;
+    letter-spacing: -0.2px;
+}
+
+.btn-row-4 .btn-text-content,
+.btn-collapse .btn-text-content {
+    white-space: nowrap !important;
 }
 
 #import-excel {
-    cursor: pointer;
-}
-
-.btn-text-content {
     cursor: pointer;
 }
