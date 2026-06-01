@@ -1742,13 +1742,21 @@ function exportPdf() {
 
   document.body.classList.add("printing");
 
-  // 1. Calculate print dimensions using fluid percentages
-  const SIDEBAR_PFX = 250;
-  const PERCENT_PER_DAY = 100 / (visualTotalDays || 1);
+  // 1. Calculate print dimensions using fluid percentages with dynamic padding
+  const SIDEBAR_PFX = 190; // Balanced width: 190px ensures the date string (e.g. 06-15~08-30) fits on one line
+  
+  // Estimate worst-case narrow paper (A4 portrait) lane width to guarantee enough padding days
+  const estimatedLaneWidthPx = 450;
+  const estimatedPxPerDay = estimatedLaneWidthPx / (visualTotalDays || 1);
+  const requiredPhysicalPaddingPx = labelOutside ? 120 : 50; // reserve space for text bleeding
+  const paddingDaysNeeded = Math.max(2, Math.ceil(requiredPhysicalPaddingPx / estimatedPxPerDay));
+  const paddedVisualTotalDays = visualTotalDays + paddingDaysNeeded;
+  
+  const PERCENT_PER_DAY = 100 / paddedVisualTotalDays;
 
   const printContainer = document.createElement("div");
   printContainer.id = "print-proxy";
-  // The container relies on CSS @media print { width: 100% } to fill whatever paper size is chosen
+  // The container will rely on default block layout (100% width) to fit the paper
   
   // Force high-contrast colors for PDF export regardless of theme
   const themeBg = "#ffffff";
@@ -1788,7 +1796,7 @@ function exportPdf() {
 
     const right = document.createElement("div");
     right.className = "lane";
-    right.style.flex = "1";
+    right.style.flex = "1"; // take remaining paper width
 
     row.appendChild(left);
     row.appendChild(right);
@@ -1805,9 +1813,8 @@ function exportPdf() {
     c.style.flex = `0 0 ${columns[idx].widthDays * PERCENT_PER_DAY}%`;
   });
   
-  // Estimate day width in pixels for label skipping calculation (assuming A4 landscape ~ 850px lane)
-  const estimatedDayWidthPx = 850 / (visualTotalDays || 1);
-  updateTimelineLabels(tmCells, estimatedDayWidthPx);
+  const estimatedDayWidth = estimatedLaneWidthPx / paddedVisualTotalDays;
+  updateTimelineLabels(tmCells, estimatedDayWidth);
   hLane.appendChild(tm);
   printContainer.appendChild(hWrapper);
 
@@ -1847,7 +1854,7 @@ function exportPdf() {
 
     let nameText = t.name;
     if (isPdfParent) {
-      nameText += ` (${fmtTaskTime(t)})`;
+      nameText += `<br><span style="font-size:0.95em; opacity:0.85;">(${fmtTaskTime(t)})</span>`;
     }
     const nameHtml = `${icon}<span class="color-dot" style="background:#${displayColor}"></span><span class="task-name-text">${nameText}</span>`;
 
