@@ -41,47 +41,17 @@ function getColorDistance(h1, h2) {
   return Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
 }
 
-function getRandomColor(excludes = [], thresholdRGB = 200, thresholdHue = 45) {
-  const excludeRgbHsl = excludes.filter(ex => !!ex).map(ex => {
-    const rgb = hexToRgb(ex);
-    return { hex: ex, rgb, hsl: rgbToHsl(rgb.r, rgb.g, rgb.b) };
-  });
+let shuffledColors = [...defaultColors];
+for (let i = shuffledColors.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [shuffledColors[i], shuffledColors[j]] = [shuffledColors[j], shuffledColors[i]];
+}
 
-  // Try up to 30 times to find a color that is distant enough in both RGB and Hue
-  for (let i = 0; i < 30; i++) {
-    const candHex = defaultColors[Math.floor(Math.random() * defaultColors.length)];
-    const candRgb = hexToRgb(candHex);
-    const candHsl = rgbToHsl(candRgb.r, candRgb.g, candRgb.b);
-
-    const isTooClose = excludeRgbHsl.some(ex => {
-      const dRGB = Math.sqrt(Math.pow(candRgb.r - ex.rgb.r, 2) + Math.pow(candRgb.g - ex.rgb.g, 2) + Math.pow(candRgb.b - ex.rgb.b, 2));
-      const dHue = getHueDistance(candHsl.h, ex.hsl.h);
-      // Both must be distant enough
-      return dRGB < thresholdRGB || dHue < thresholdHue;
-    });
-
-    if (!isTooClose) return candHex;
-  }
-
-  // Fallback: Pick the one with the maximum minimum distance to any exclude
-  let bestCand = defaultColors[0];
-  let maxMinDist = -1;
-  defaultColors.forEach(candHex => {
-    const candRgb = hexToRgb(candHex);
-    const candHsl = rgbToHsl(candRgb.r, candRgb.g, candRgb.b);
-    let minDist = Infinity;
-    excludeRgbHsl.forEach(ex => {
-      const dRGB = Math.sqrt(Math.pow(candRgb.r - ex.rgb.r, 2) + Math.pow(candRgb.g - ex.rgb.g, 2) + Math.pow(candRgb.b - ex.rgb.b, 2));
-      const dHue = getHueDistance(candHsl.h, ex.hsl.h) * 2; // Weight hue more in fallback
-      const combined = dRGB + dHue;
-      if (combined < minDist) minDist = combined;
-    });
-    if (minDist > maxMinDist) {
-      maxMinDist = minDist;
-      bestCand = candHex;
-    }
-  });
-  return bestCand;
+let colorPickerIndex = 0;
+function getRandomColor(excludes = [], thresholdRGB = 150, thresholdHue = 30) {
+  const color = shuffledColors[colorPickerIndex % shuffledColors.length];
+  colorPickerIndex++;
+  return color;
 }
 
 /**
@@ -95,9 +65,9 @@ function ensureDistinctColors() {
       const newColor = getRandomColor(lastColors);
       t.color = newColor;
     }
-    // Track the last 5 colors used in sequence to maintain variety
+    // Track the last 2 colors used in sequence to maintain variety without exhausting the palette
     lastColors.push(t.color);
-    if (lastColors.length > 5) lastColors.shift();
+    if (lastColors.length > 2) lastColors.shift();
   });
 }
 
@@ -1386,7 +1356,7 @@ function handleExcelFile(file) {
         const sColor = getRandomColor(lastSeriesColors);
         item.color = sColor;
         lastSeriesColors.push(sColor);
-        if (lastSeriesColors.length > 3) lastSeriesColors.shift();
+        if (lastSeriesColors.length > 2) lastSeriesColors.shift();
 
         finalTasksList.push(item);
         item.children.forEach(c => {
@@ -1772,17 +1742,13 @@ function exportPdf() {
 
   document.body.classList.add("printing");
 
-  // 1. Calculate print dimensions
-  const TARGET_PAGE_WIDTH = 2200;
-  const SIDEBAR_PFX = 360;
-  const GANTT_PFX = TARGET_PAGE_WIDTH - SIDEBAR_PFX;
-  const PRINT_DAY_WIDTH = Math.max(15, Math.floor(GANTT_PFX / (visualTotalDays || 1)));
-  const actualGanttWidth = visualTotalDays * PRINT_DAY_WIDTH;
-  const actualTotalWidth = SIDEBAR_PFX + actualGanttWidth;
+  // 1. Calculate print dimensions using fluid percentages
+  const SIDEBAR_PFX = 250;
+  const PERCENT_PER_DAY = 100 / (visualTotalDays || 1);
 
   const printContainer = document.createElement("div");
   printContainer.id = "print-proxy";
-  printContainer.style.width = actualTotalWidth + "px";
+  // The container relies on CSS @media print { width: 100% } to fill whatever paper size is chosen
   
   // Force high-contrast colors for PDF export regardless of theme
   const themeBg = "#ffffff";
@@ -1802,6 +1768,10 @@ function exportPdf() {
 
   // 3. Helper for Rows
   const createRow = (contentLeft, isHeader = false) => {
+    const rowWrapper = document.createElement("div");
+    rowWrapper.style.pageBreakInside = "avoid";
+    rowWrapper.style.breakInside = "avoid";
+
     const row = document.createElement("div");
     row.className = "print-row" + (isHeader ? " is-header" : "");
     row.style.background = isHeader ? themeHeaderBg : themeRowBg;
@@ -1812,30 +1782,34 @@ function exportPdf() {
 
     const left = document.createElement("div");
     left.className = "task-name";
-    left.style.width = SIDEBAR_PFX + "px";
+    left.style.flex = `0 0 ${SIDEBAR_PFX}px`;
     left.style.color = themeText;
     left.innerHTML = contentLeft;
 
     const right = document.createElement("div");
     right.className = "lane";
-    right.style.width = actualGanttWidth + "px";
+    right.style.flex = "1";
 
     row.appendChild(left);
     row.appendChild(right);
-    return { row, right };
+    rowWrapper.appendChild(row);
+    return { rowWrapper, row, right };
   };
 
   // 4. Header (Timeline)
-  const { row: hRow, right: hLane } = createRow('<div style="padding-left:10px">' + t("timeline") + '</div>', true);
+  const { rowWrapper: hWrapper, right: hLane } = createRow('<div style="padding-left:10px">' + t("timeline") + '</div>', true);
   const tm = document.querySelector(".timeline").cloneNode(true);
-  tm.style.width = actualGanttWidth + "px";
+  tm.style.width = "100%";
   const tmCells = Array.from(tm.querySelectorAll(".day"));
   tmCells.forEach((c, idx) => {
-    c.style.flex = `0 0 ${columns[idx].widthDays * PRINT_DAY_WIDTH}px`;
+    c.style.flex = `0 0 ${columns[idx].widthDays * PERCENT_PER_DAY}%`;
   });
-  updateTimelineLabels(tmCells, PRINT_DAY_WIDTH);
+  
+  // Estimate day width in pixels for label skipping calculation (assuming A4 landscape ~ 850px lane)
+  const estimatedDayWidthPx = 850 / (visualTotalDays || 1);
+  updateTimelineLabels(tmCells, estimatedDayWidthPx);
   hLane.appendChild(tm);
-  printContainer.appendChild(hRow);
+  printContainer.appendChild(hWrapper);
 
   // 5. Tasks
   // Compute which series tasks have children (for PDF rendering)
@@ -1877,7 +1851,7 @@ function exportPdf() {
     }
     const nameHtml = `${icon}<span class="color-dot" style="background:#${displayColor}"></span><span class="task-name-text">${nameText}</span>`;
 
-    const { row, right } = createRow(nameHtml);
+    const { rowWrapper, row, right } = createRow(nameHtml);
     if (isPdfParent) row.classList.add("is-parent");
     if (t.parentId) {
       row.classList.add("is-child");
@@ -1885,7 +1859,7 @@ function exportPdf() {
     }
 
     right.style.backgroundImage = `linear-gradient(to right, ${cs.getPropertyValue("--border").trim() || "#eee"} 1px, transparent 1px)`;
-    right.style.backgroundSize = `${(1 / (visualTotalDays || 1)) * 100}% 100%`;
+    right.style.backgroundSize = `${PERCENT_PER_DAY}% 100%`;
 
     const bar = document.createElement("div");
     bar.className = "bar";
@@ -1900,11 +1874,15 @@ function exportPdf() {
     if (isPdfParent) {
       label.textContent = t.name + ` (${fmtTaskTime(t)})`;
     }
-    // Use theme text color with contrasting glow for readability on colored bars
-    const labelTextColor = themeText;
-    const themeAttr = document.documentElement.getAttribute("data-theme");
-    const glowColor = (themeAttr === "dark" || themeAttr === "blue" || themeAttr === "gray") ? "#000" : "#fff";
-    label.style.cssText = `white-space:nowrap !important; word-break:normal !important; color:${labelTextColor} !important; text-shadow:0 0 2px ${glowColor}, 0 0 2px ${glowColor}, 0 0 2px ${glowColor} !important; font-weight:500 !important; overflow:visible !important;`;
+    if (labelOutside) {
+      // Use theme text color with contrasting glow for readability on colored bars
+      const labelTextColor = themeText;
+      const themeAttr = document.documentElement.getAttribute("data-theme");
+      const glowColor = (themeAttr === "dark" || themeAttr === "blue" || themeAttr === "gray") ? "#000" : "#fff";
+      label.style.cssText = `white-space:nowrap !important; word-break:normal !important; color:${labelTextColor} !important; text-shadow:0 0 2px ${glowColor}, 0 0 2px ${glowColor}, 0 0 2px ${glowColor} !important; font-weight:500 !important; overflow:visible !important;`;
+    } else {
+      label.style.cssText = `white-space:nowrap !important; word-break:normal !important; color:#ffffff !important; text-shadow: -0.5px -0.5px 0 #000, 0.5px -0.5px 0 #000, -0.5px 0.5px 0 #000, 0.5px 0.5px 0 #000, 0 0 2px #000 !important; font-weight:500 !important; overflow:visible !important;`;
+    }
     bar.appendChild(label);
 
     const sub = document.createElement("div");
@@ -1927,11 +1905,11 @@ function exportPdf() {
 
     const lUnits = getUnits(t.start);
     const rUnits = getUnits(addDays(t.end, 1));
-    bar.style.left = (lUnits * PRINT_DAY_WIDTH) + "px";
-    bar.style.width = ((rUnits - lUnits) * PRINT_DAY_WIDTH) + "px";
+    bar.style.left = (lUnits * PERCENT_PER_DAY) + "%";
+    bar.style.width = ((rUnits - lUnits) * PERCENT_PER_DAY) + "%";
 
     right.appendChild(bar);
-    printContainer.appendChild(row);
+    printContainer.appendChild(rowWrapper);
   });
 
   document.body.appendChild(printContainer);
@@ -1972,6 +1950,17 @@ document.getElementById("do-export-pdf").addEventListener("click", () => { expor
 document.getElementById("preview-mode-btn").addEventListener("click", () => {
   document.body.classList.add("preview-mode");
   applyAllPositions();
+  
+  // Show fade-out prompt
+  const prompt = document.createElement("div");
+  prompt.textContent = "按Esc键退出预览模式";
+  prompt.style.cssText = "position:fixed; top:40px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); color:#fff; padding:10px 20px; border-radius:8px; z-index:999999; font-size:14px; opacity:1; transition:opacity 0.5s; pointer-events:none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(4px);";
+  document.body.appendChild(prompt);
+  
+  setTimeout(() => {
+    prompt.style.opacity = "0";
+    setTimeout(() => prompt.remove(), 500);
+  }, 3000);
 });
 
 document.getElementById("collapse-mode-btn").addEventListener("click", () => {

@@ -1042,9 +1042,7 @@ body.label-outside .bar {
 
 .bar .label {
   pointer-events: none;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  white-space: nowrap;
   line-height: 1.2;
   font-weight: 700;
   font-size: 12px;
@@ -1140,6 +1138,8 @@ body.label-outside .bar {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+
 
   .print-row.is-header {
     background: var(--print-header-bg);
