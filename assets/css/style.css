@@ -883,7 +883,7 @@ body.collapse-mode .bar.is-parent::after {
 /* === Label Outside Mode: task name shown to the right of the bar === */
 body.label-outside .bar .label {
   position: absolute;
-  left: 100%;
+  left: max(100%, 95px);
   top: 50%;
   transform: translateY(-50%);
   margin-left: 6px;

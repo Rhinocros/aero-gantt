@@ -1147,14 +1147,19 @@ function handleExcelFile(file) {
       if (startIdx !== -1 && endIdx !== -1) break;
     }
 
-    // Fallback to defaults if still -1
-    if (nameIdx === -1) {
-      // Hierarchy Detection: If Col 1 has content where Col 0 is empty, it's likely the task name column
-      let c1Only = 0;
-      for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 1 + 15, rows.length); i++) {
-        if (rows[i] && rows[i][1] && !rows[i][0]) c1Only++;
-      }
-      nameIdx = (c1Only > 0) ? 1 : 0;
+    // Hierarchy Detection: Check if Col 1 has content where Col 0 is empty
+    let c1Only = 0;
+    for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 1 + 15, rows.length); i++) {
+      const col0 = String(rows[i] ? (rows[i][0] || "") : "").trim();
+      const col1 = String(rows[i] ? (rows[i][1] || "") : "").trim();
+      // Basic check to ensure col1 isn't just a date column (in case of single column layout)
+      const isCol1Date = /^\d/.test(col1) && (col1.includes('-') || col1.includes('/') || col1.includes('年'));
+      if (col1 && !col0 && !isCol1Date) c1Only++;
+    }
+    if (c1Only > 0) {
+      nameIdx = 1; // It's a hierarchy: Col 0 is Parent, Col 1 is Child
+    } else if (nameIdx === -1) {
+      nameIdx = 0;
     }
 
     // Smarter Date Detection if keywords failed
@@ -1166,7 +1171,8 @@ function handleExcelFile(file) {
           // Excel dates are numbers around 45000-47000 (roughly 2023-2028)
           const isExcelDate = (typeof cell === 'number' && cell > 44000 && cell < 50000);
           const isDateObj = (cell instanceof Date && !isNaN(cell.getTime()));
-          if (isExcelDate || isDateObj) {
+          const isDateString = typeof cell === 'string' && (/\d{4}[-\/年]\d{1,2}[-\/月]\d{1,2}/.test(cell) || /\d{1,2}[-\/月]\d{1,2}日?/.test(cell));
+          if (isExcelDate || isDateObj || isDateString) {
             if (startIdx === -1) startIdx = idx;
             else if (endIdx === -1 && idx > startIdx) endIdx = idx;
           }
@@ -1175,7 +1181,7 @@ function handleExcelFile(file) {
       }
     }
 
-    if (startIdx === -1) startIdx = 1;
+    if (startIdx === -1) startIdx = Math.max(1, nameIdx + 1);
     if (endIdx === -1) endIdx = (startIdx + 1);
 
     // ---- Duration Mode Detection ----
@@ -1215,9 +1221,7 @@ function handleExcelFile(file) {
       const valA = String(row[0] || "").trim();
       const nameVal = String(row[nameIdx] || "").trim();
 
-      // If there is no name column (e.g. simple 2-column layout),
-      // treat valA as the immediate task name, not a sticky series header.
-      const isSingleNameCol = (nameIdx === 0 || nameIdx === -1 || !row.some((v, i) => i !== 0 && i !== startIdx && i !== endIdx && typeof v === "string"));
+      const isSingleNameCol = (nameIdx === 0 || nameIdx === -1);
 
       let taskName, pName, isHeader;
 
@@ -1279,6 +1283,10 @@ function handleExcelFile(file) {
             if (startVal) {
               if (typeof startVal === "number") {
                 tStart = new Date(Math.round((startVal - 25569) * 86400 * 1000) + new Date().getTimezoneOffset() * 60000);
+              } else if (typeof startVal === "string") {
+                let cleanStr = startVal.replace(/[年月]/g, '/').replace(/日/g, '').trim();
+                const d = new Date(cleanStr);
+                if (!isNaN(d.getTime())) tStart = d;
               } else {
                 const d = new Date(startVal);
                 if (!isNaN(d.getTime())) tStart = d;
@@ -1287,6 +1295,10 @@ function handleExcelFile(file) {
             if (endVal) {
               if (typeof endVal === "number") {
                 tEnd = new Date(Math.round((endVal - 25569) * 86400 * 1000) + new Date().getTimezoneOffset() * 60000);
+              } else if (typeof endVal === "string") {
+                let cleanStr = endVal.replace(/[年月]/g, '/').replace(/日/g, '').trim();
+                const d = new Date(cleanStr);
+                if (!isNaN(d.getTime())) tEnd = d;
               } else {
                 const d = new Date(endVal);
                 if (!isNaN(d.getTime())) tEnd = d;
@@ -1323,25 +1335,23 @@ function handleExcelFile(file) {
 
     // Hierarchy Parsing
     const finalTasksList = [];
+    const orderedItems = [];
     const seriesMap = new Map();
 
     newTasks.forEach(t => {
       if (t.type === "series") {
         if (!seriesMap.has(t.name)) {
-          seriesMap.set(t.name, {
+          const s = {
             ...t,
             color: "374151", // Keep as marker for now, will re-assign below
             children: []
-          });
-        } else {
-          // Header row seen after children? unlikely but let's merge
-          const s = seriesMap.get(t.name);
-          s.start = new Date(Math.min(s.start, t.start));
-          s.end = new Date(Math.max(s.end, t.end));
+          };
+          seriesMap.set(t.name, s);
+          orderedItems.push(s);
         }
       } else if (t.parentName) {
         if (!seriesMap.has(t.parentName)) {
-          seriesMap.set(t.parentName, {
+          const s = {
             id: "series_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
             name: t.parentName,
             start: new Date(t.start),
@@ -1349,31 +1359,45 @@ function handleExcelFile(file) {
             color: "374151", // Keep as marker for now, will re-assign below
             type: "series",
             children: []
-          });
+          };
+          seriesMap.set(t.parentName, s);
+          orderedItems.push(s);
         }
         const s = seriesMap.get(t.parentName);
-        if (t.start < s.start) s.start = new Date(t.start);
-        if (t.end > s.end) s.end = new Date(t.end);
         s.children.push(t);
       } else {
-        finalTasksList.push(t);
+        orderedItems.push(t);
+      }
+    });
+
+    // Recompute series dates based purely on children if children exist
+    orderedItems.forEach(item => {
+      if (item.type === "series" && item.children && item.children.length > 0) {
+        const childStarts = item.children.map(c => c.start.getTime());
+        const childEnds = item.children.map(c => c.end.getTime());
+        item.start = new Date(Math.min(...childStarts));
+        item.end = new Date(Math.max(...childEnds));
       }
     });
 
     let lastSeriesColors = [];
-    seriesMap.forEach(s => {
-      const sColor = getRandomColor(lastSeriesColors);
-      s.color = sColor;
-      lastSeriesColors.push(sColor);
-      if (lastSeriesColors.length > 3) lastSeriesColors.shift();
+    orderedItems.forEach(item => {
+      if (item.type === "series") {
+        const sColor = getRandomColor(lastSeriesColors);
+        item.color = sColor;
+        lastSeriesColors.push(sColor);
+        if (lastSeriesColors.length > 3) lastSeriesColors.shift();
 
-      finalTasksList.push(s);
-      s.children.forEach(c => {
-        c.parentId = s.id;
-        c.isChild = true;
-        finalTasksList.push(c);
-      });
-      delete s.children;
+        finalTasksList.push(item);
+        item.children.forEach(c => {
+          c.parentId = item.id;
+          c.isChild = true;
+          finalTasksList.push(c);
+        });
+        delete item.children;
+      } else {
+        finalTasksList.push(item);
+      }
     });
 
     if (finalTasksList.length > 0) {
